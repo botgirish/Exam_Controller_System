@@ -1,5 +1,7 @@
-import streamlit as st
+from flask import Flask, render_template, request, send_file
 import pandas as pd
+# pip intall flask openpyxl pandas priror
+app = Flask(__name__)
 
 # Function to process the uploaded Excel file
 def process_excel(uploaded_file):
@@ -36,7 +38,6 @@ def process_excel(uploaded_file):
 
     # Assign Grades
     grades_assigned = []
-    current_index = 0
     for _, row in grades_df.iterrows():
         grade = row['grade']
         count_verified = int(row['Count verified'])
@@ -89,27 +90,24 @@ def process_excel(uploaded_file):
 
     return student_data, df, grade_counts_sorted
 
-# Streamlit App
-st.title("Excel Processor for Grades and Scaled Scores")
-uploaded_file = st.file_uploader("Upload an Excel file", type=['xlsx'])
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        file = request.files['file']
+        if file:
+            # Process the uploaded file
+            student_data, df, grade_counts_sorted = process_excel(file)
 
-if uploaded_file:
-    st.success("File uploaded successfully!")
-    student_data, df, grade_counts_sorted = process_excel(uploaded_file)
+            # Save processed data to an Excel file
+            output_file = 'processed_data.xlsx'
+            with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+                student_data.to_excel(writer, sheet_name="student_data", index=False)
+                df.to_excel(writer, sheet_name="df", index=False)
+                grade_counts_sorted.to_excel(writer, sheet_name="grade_counts_sorted", index=False)
 
-    # Display DataFrames
-    st.header("Student Data")
-    st.dataframe(student_data)
-    st.header("Grade Statistics")
-    st.dataframe(df)
-    st.header("Sorted Grade Counts Difference")
-    st.dataframe(grade_counts_sorted)
+            return send_file(output_file, as_attachment=True)
 
-    # Download Buttons
-    with pd.ExcelWriter("processed_data.xlsx", engine='openpyxl') as writer:
-        student_data.to_excel(writer, sheet_name="student_data", index=False)
-        df.to_excel(writer, sheet_name="df", index=False)
-        grade_counts_sorted.to_excel(writer, sheet_name="grade_counts_sorted", index=False)
+    return render_template('index.html')
 
-    with open("processed_data.xlsx", "rb") as file:
-        st.download_button("Download Processed Excel", data=file, file_name="processed_data.xlsx")
+if __name__ == '__main__':
+    app.run(debug=True)
