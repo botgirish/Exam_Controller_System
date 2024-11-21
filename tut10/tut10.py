@@ -1,8 +1,6 @@
 from flask import Flask, request, render_template, send_file
 import pandas as pd
 import os
-# ' pip install flask pandas openpyxl "  run this cmd in terminal first
-# "python tut10.py" run this after
 
 app = Flask(__name__)
 
